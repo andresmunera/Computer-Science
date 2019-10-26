@@ -1,4 +1,4 @@
-[6:47 PM, 10/18/2019] Andrés: const int AOUTpin=0;//the AOUT pin of the CO sensor goes into analog pin A0 of the arduino
+const int AOUTpin=0;//the AOUT pin of the CO sensor goes into analog pin A0 of the arduino
 
 int limit;
 int value;
