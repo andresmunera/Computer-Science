@@ -1,0 +1,183 @@
+import java.io.BufferedReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.URL;
+import java.util.ArrayList;
+import javafx.util.Pair;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+/**
+ *
+ * @author manuelgutierrez
+ */
+
+public class Hola {
+
+    static ArrayList<Pair<String, Double>> temperaturas = new ArrayList<>(); 
+    static int indiceTempMin; 
+    static int indiceTempMax; // Este indice nos indica en que posición del ArrayList está la temperatura máxima
+    
+    /**
+     * Obtenemos los datos de la página web que nos proporciona ThingSpeak.
+     * @return cadena de caracteres con todo el archivo Json de la página
+     */
+    public static String leerPaginaWeb() {
+        String code = "";
+        try {
+            StringBuffer codeBuffered = new StringBuffer();
+
+            URL url = new URL("https://thingspeak.com/channels/870229/feed.json");
+            InputStream in = url.openStream();
+            BufferedReader read = new BufferedReader(new InputStreamReader(in));
+
+            String line;
+            int i = 0;
+            while ((line = read.readLine()) != null) {
+                codeBuffered.append(line).append("\n");
+
+            }
+
+            code = codeBuffered.toString(); // Este es el código de la página
+
+            //cerramos los streams
+            in.close();
+            read.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return code;
+    }
+    /**
+     * Método donde obtengo los valores de mi archivo Json. ¿Qué es un archivo Json?
+     * https://canela.me/articulo/JSON-JavaScript-jQuery/%C2%BFQu%C3%A9-es-JSON-para-qu%C3%A9-sirve-y-d%C3%B3nde-se-usa
+     */
+    public static void recibirParametros() {
+        try {
+            JSONObject obj = new JSONObject(leerPaginaWeb());
+            JSONArray arr = obj.getJSONArray("feeds");
+            for (int i = 0; i < arr.length(); i++) {
+                String fecha = arr.getJSONObject(i).getString("created_at");
+                double temperatura = arr.getJSONObject(i).getDouble("field1");
+                //System.out.println("fecha "+post_id+" temperatura:"+ field1);
+                agregarDatos(fecha, temperatura);
+            }
+        } catch (JSONException e) {
+            System.out.println("No pude leer la página web.");
+        }
+
+    }
+
+    /**
+     * Añadimos nuestros dos valores a el ArrayList.
+     *
+     * @param fecha
+     * @param valorTemperatura
+     */
+    public static void agregarDatos(String fecha, double valorTemperatura) {
+        temperaturas.add(new Pair(fecha, valorTemperatura));
+    }
+
+    /**
+     * Recorremos el ArrayList para sumar todas las temperaturas y al final
+     * dividir por el número de temperaturas que tenemos.
+     *
+     * @return promedio
+     */
+    public static double hallarTemperaturaPromedio() {
+        double sumatoria = 0;
+        for (int i = 0; i < temperaturas.size(); i++) {
+            sumatoria += temperaturas.get(i).getValue();
+        }
+        return sumatoria / temperaturas.size();
+
+    }
+
+    /**
+     * Hacemos un sort (ordenamiento) sencillo para calcular la temperatura
+     * minima.
+     *
+     * @return menor
+     */
+    public static double hallarTemperaturaMin() {
+        double menor = temperaturas.get(0).getValue();
+        for (int i = 1; i < temperaturas.size(); i++) {
+            if (menor >= temperaturas.get(i).getValue()) {
+                menor = temperaturas.get(i).getValue();
+                indiceTempMin = i;
+            }
+        }
+        return menor;
+    }
+
+    /**
+     * Hacemos un sort (ordenamiento) sencillo para calcular la temperatura
+     * maxima.
+     *
+     * @return
+     */
+    public static double hallarTemperaturaMax() {
+        double mayor = temperaturas.get(0).getValue();
+        for (int i = 1; i < temperaturas.size(); i++) {
+            if (mayor <= temperaturas.get(i).getValue()) {
+                mayor = temperaturas.get(i).getValue();
+                indiceTempMax = i;
+            }
+        }
+        return mayor;
+    }
+
+    /**
+     * Escribimos nuestro archivo para guardarlo en nuestra máquina con todas
+     * las temperaturas y la temperatura promedio, minima y máxima.
+     *
+     * Explicación de como escribir un archivo:
+     * https://www.youtube.com/watch?v=i04SHI2oZx4
+     *
+     * @param promedioTemp
+     * @param minimTemp
+     * @param maxTemp
+     */
+    public static void escribirArchivo(double promedioTemp, double minimTemp, double maxTemp) {
+        FileWriter fichero = null;
+        PrintWriter pw = null;
+        try {
+            System.out.println("voy acá");
+            fichero
+                    = new FileWriter("C:\\Users\\Jorge Daniel R\\Desktop\\Archivo.txt"); // Dirección de mi máquina donde guardamos nuestro archivo escrito.             
+            pw = new PrintWriter(fichero);
+            pw.println("Co promedio: " + promedioTemp);
+            pw.println("Co máximo: " + maxTemp);
+            pw.println("Co minima: " + minimTemp);
+            for (int i = 0; i < temperaturas.size(); i++) {
+                pw.print("Fecha : " + temperaturas.get(i).getKey() + "    ");
+                pw.println("Co : " + temperaturas.get(i).getValue());
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (null != fichero) {
+                    fichero.close();
+                }
+            } catch (Exception e2) {
+                e2.printStackTrace();
+            }
+        }
+    }
+
+    public static void main(String[] args) {
+        recibirParametros();
+        hallarTemperaturaPromedio();
+        
+        double promedioTemp = hallarTemperaturaPromedio();
+        double minimTemp = hallarTemperaturaMin();
+        double maxTemp = hallarTemperaturaMax();
+        
+        escribirArchivo(promedioTemp,minimTemp, maxTemp);
+    }
+}
